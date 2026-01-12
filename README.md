@@ -1,326 +1,140 @@
-Projektdokumentation — 🎰 ROULADETTI DELUXE v3.4 (PowerShell)
-=============================================================
+🎰 ROULADETTI DELUXE v3.4
+=========================
 
-1) Kurzbeschrieb (Zweck & Einsatzgebiet)
-----------------------------------------
+**Multi-Player Roulette in PowerShell — with Credit & Interest**
 
-**ROULADETTI DELUXE** isch es terminal-basierts Roulette-Spiel in **PowerShell**.Es isch fürs Üebe/Showcase vo Scripting gedacht (Input-Parsing, State-Handling, RNG, JSON Save/Load) und chan im Team/Schuel-Umfeld als Demo-Projekt bruucht werde.
+A terminal-based roulette game written in **PowerShell**, featuring multiple players, persistent save states, fair RNG, credit mechanics, and a bit of casino attitude.
 
-**Highlights:**
+Built for fun, not for profit. The house _will_ win long-term.
 
-*   Multi-Player (mehreri Spieler im gliche Save)
+✨ Features
+----------
+
+*   🎯 **Classic Roulette Bets**
     
-*   Persistente Speicherung (JSON-Statefile)
+    *   Color (red / black) → 1:1
+        
+    *   Even / Odd → 1:1 (0 always loses)
+        
+    *   Single Number (0–36) → 35:1
+        
+*   👥 **Multi-Player Support**
     
-*   Kredit-System mit Limit + Zins (1% jede 5. Runde pro Spieler)
+    *   Add players
+        
+    *   Switch active player
+        
+    *   Each player has their own balance, debt & round count
+        
+*   💾 **Persistent Save System**
     
-*   Faire Zufallszahl (Crypto RNG)
+    *   Auto-save every 5 rounds
+        
+    *   Manual save / load
+        
+    *   JSON-based state file
+        
+*   💳 **Credit System**
     
-*   Command-Menü + praktische Befehle
+    *   Take credit up to a global limit
+        
+    *   Repay anytime (if you have cash)
+        
+    *   Automatic interest every 5 rounds
+        
+*   📈 **Interest Mechanics**
     
-
-2) Voraussetzungen / Umgebung
------------------------------
-
-### Betriebssystem
-
-*   Windows 10/11 (empfohlen)
+    *   1% interest on outstanding debt
+        
+    *   Applied every 5 rounds per player
+        
+    *   Rounded up (casino rules)
+        
+*   🎲 **Fair RNG**
     
-*   PowerShell Core (7.x) funktioniert i de Regel au
+    *   Uses System.Security.Cryptography.RandomNumberGenerator
+        
+    *   No shady Get-Random
+        
+*   🎭 **NPC Quotes & Voice Lines**
     
+    *   Random casino chatter
+        
+    *   External quote API with fallback lines
+        
 
-### PowerShell Version
+🛠 Requirements
+---------------
 
-*   Minimum: **Windows PowerShell 5.1** oder **PowerShell 7+**
+*   **Windows PowerShell 5.1+** or **PowerShell 7+**
     
-
-### Netzwerk
-
-*   Optional: Internet, nur für **NPC-Quotes** via API (https://api.quotable.io/random)→ Wenn offline: Script nutzt automatisch Fallback-Sprüche (keine Fehlfunktion)
-    
-
-### Berechtigungen (Execution Policy)
-
-Wenn Scripts blockiert sind:
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned   `
-
-Oder nur temporär für die aktuelle Session:
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   powershell -ExecutionPolicy Bypass -File .\roulette.ps1   `
-
-3) Installation / Projektstruktur
----------------------------------
-
-Lege das Script z.B. so ab:
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   /Roulettetti    roulette.ps1    roulette_state.json   (wird automatisch erstellt)   `
-
-4) Start / Ausführung
----------------------
-
-### Standardstart
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   .\roulette.ps1   `
-
-Beim Start wird (wenn kein Savefile vorhanden ist) automatisch ein Default-State erstellt:
-
-*   ActivePlayer = "Anna"
-    
-*   Balance = CHF 300 (oder dein StartBalance)
-    
-
-### Start mit Parametern
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   .\roulette.ps1 -StartBalance 500   `
-
-### Start mit eigenem Statefile-Pfad
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   .\roulette.ps1 -StatePath "C:\Temp\roulette_state.json"   `
-
-5) Parameter (CLI-Parameter)
-----------------------------
-
-ParameterTypPflichtDefaultBeschreibung-StartBalanceintoptional300Startguthaben pro neuem Spieler / bei Reset-StatePathstringoptional.\\roulette\_state.jsonSpeicherort fürs JSON Savefile
-
-**Wichtig:**Wenn -StatePath leer isch, setzt das Script automatisch:
-
-*   Wenn $PSScriptRoot existiert → Savefile im Script-Ordner
-    
-*   Sonst → Savefile im aktuellen Arbeitsverzeichnis
+*   Internet connection (optional, only for NPC quotes)
     
 
-6) Bedienung im Spiel (Input & Flow)
-------------------------------------
+🚀 How to Run
+-------------
 
-Das Script läuft in ere Endlosschlaufe. Pro Runde:
+Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   .\rouladetti.ps1   `
 
-1.  NPC Quote (online oder fallback)
-    
-2.  Wenn Balance ≤ 0 → Kreditangebot
-    
-3.  Anzeige “Place your bets…”
-    
-4.  User input (Wette oder Command)
-    
-5.  Spin + Resultat
-    
-6.  Auszahlung oder Verlust
-    
-7.  Runden-Zähler + evtl. Zins (jede 5 Runde)
-    
-8.  Auto-Save jede 5 Runde
-    
+Optional parameters:
 
-Beenden mit q.
+Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   .\rouladetti.ps1 -StartBalance 500 -StatePath ".\roulette_state.json"   `
 
-7) Befehle & Funktionen (In-Game Commands)
-------------------------------------------
+### Parameters
 
-### Hilfe / Übersicht
+ParameterDescriptionStartBalanceStarting cash per new player (default: 300)StatePathPath to save file (default: script directory)
 
-*   helpZeigt Menü, Wettarten, Beispiele und Commands.
-    
-
-### Save/Load/Reset
-
-*   saveSpeichert aktuellen State (Players, Balances, Debts, Rounds).
-    
-*   loadLädt vorhandenes Savefile.
-    
-*   resetSetzt Multi-Player State zurück und erstellt neu nur Spieler “Anna”.
-    
-
-### Status
-
-*   balZeigt Balance, Debt und Rounds vom aktiven Spieler.
-    
-
-### Multi-Player Verwaltung
-
-*   playersListet alle Spieler + markiert aktiven Spieler mit ⭐
-    
-*   player add Erstellt neuen Spieler mit StartBalance.
-    
-*   player use Wechselt aktiven Spieler.
-    
-
-### Kredit / Schulden
-
-*   creditÖffnet Kredit-Dialog: Kredit aufnehmen bis max. Kreditlimit.
-    
-*   repay Zahlt Schulden ab (wenn Balance genügt).
-    
-
-### Quit
-
-*   qBeendet das Spiel (State wird vor Exit gespeichert).
-    
-
-8) Wettarten (Syntax & Auszahlungen)
-------------------------------------
-
-**Syntax allgemein:**
+🎯 Betting Syntax
+-----------------
 
 Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML  
 
-### 8.1 color (Rot/Schwarz)
+### Examples
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   color red 10  color black 50   `
+Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   color red 10  evenodd odd 20  number 17 5   `
 
-*   Auszahlung: **2x Einsatz** (1:1 + Einsatz retour)
+📋 Commands
+-----------
+
+CommandActionhelpShow betting & command menubalShow balance, debt & roundssaveSave game stateloadLoad saved stateresetReset game (keeps multi-player)playersList all playersplayer add Add new playerplayer use Switch active playercreditTake a loanrepay Repay debtqQuit game
+
+💳 Credit & Interest Rules
+--------------------------
+
+*   Max total credit per player: **CHF 1000**
     
-*   0 zählt als **Green** → verliert bei color
+*   Interest rate: **1%**
     
-
-### 8.2 evenodd (Gerade/Ungerade)
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   evenodd even 20  evenodd odd 20   `
-
-*   Auszahlung: **2x Einsatz**
+*   Interest applies **every 5 rounds**
     
-*   **0 zählt nicht** als even/odd → immer Verlust
+*   Interest is rounded **up**
     
-
-### 8.3 number (Zahl 0–36)
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   number 17 5  number 0 10   `
-
-*   Auszahlung: **35x Einsatz** (klassisch Roulette)
+*   No balance = no betting (unless you take credit)
     
 
-9) Kredit-System (Regeln)
--------------------------
+This is intentional. Play smart or pay interest.
 
-*   Max Kredit pro Spieler: **CHF 1000**
+📂 Save File
+------------
+
+*   Stored as roulette\_state.json
     
-*   Wenn Balance ≤ 0, wird automatisch Offer-Credit ausgelöst.
+*   Includes:
     
-*   Kredit erhöht:
-    
-    *   Balance += Kreditbetrag
+    *   Game version
         
-    *   Debt += Kreditbetrag
+    *   Timestamp
         
-
-### Zins (Interest)
-
-*   Wenn Debt > 0 und **Rounds % 5 == 0**→ Zins wird gerechnet:
-    
-    *   Debt = Ceiling(Debt \* 1.01)
+    *   Active player
         
-*   Ausgabe im Terminal:
-    
-    *   “📈 Zinse hit: Debt CHF X → CHF Y (+1%)”
+    *   All player balances, debts & rounds
         
 
-### Rückzahlung
+Safe to delete if you want a fresh start.
 
-*   repay reduziert:
-    
-    *   Balance -= pay
-        
-    *   Debt -= pay
-        
-*   Pay ist minimal von und aktueller Debt.
-    
+⚠️ Disclaimer
+-------------
 
-10) Validierung & Fehlermeldungen
----------------------------------
+This game **simulates gambling mechanics**.No real money involved.If you wouldn’t bet it IRL — don’t bet it here.
 
-Das Script validiert:
-
-*   Betrag > 0
-    
-*   Betrag ≤ Balance (oder Kredit anbieten)
-    
-*   Wertebereiche:
-    
-    *   number: 0–36
-        
-    *   color: red|black
-        
-    *   evenodd: even|odd
-        
-
-Beispiele für Fehler:
-
-*   “❌ Zu wenig Guthabe”
-    
-*   “❌ Zahl 0–36 only.”
-    
-*   “❓ Ungültig. Tipp: help”
-    
-
-11) Beispiele (konkret & verständlich)
---------------------------------------
-
-### Beispiel A — Standardrunde
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   🎲 [Anna] Setz dini Wette: color red 10  ➡️ Landed on 32 (Red)  💵 Payout: CHF 20 | Balance: CHF 310   `
-
-### Beispiel B — Zahlwette (High risk)
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   🎲 [Anna] Setz dini Wette: number 17 5  ➡️ Landed on 17 (Black)  💵 Payout: CHF 175 | Balance: CHF 470   `
-
-### Beispiel C — Spieler hinzufügen & wechseln
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   player add Marco  player use Marco  bal   `
-
-### Beispiel D — Kredit aufnehmen (wenn broke)
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   balance = 0  credit  yes  200   `
-
-### Beispiel E — Schulden zurückzahlen
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   repay 50   `
-
-### Beispiel F — Save & Load
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   save  load   `
-
-12) Screenshots (Platzhalter + was sinnvoll ist)
-------------------------------------------------
-
-Du chasch 2–3 Screenshots mache (das reicht völlig):
-
-1.  **Startscreen + Menü**
-    
-    *   Zeigt Player, Balance, Debt, Commands
-        
-2.  **Eine Runde mit Resultat**
-    
-    *   Wette → Spin → Landed on → payout/lose
-        
-3.  **Players-Liste oder Kredit/Repay**
-    
-    *   Spielerwechsel oder Kreditaufnahme mit Debt-Anzeige
-        
-
-**Tipp:** Screenshot direkt im Terminal (Windows Terminal / PowerShell) und i GitHub in /docs/screens/ ablege, z.B.:
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   /docs/screens/start.png  /docs/screens/round_win.png  /docs/screens/credit.png   `
-
-Dann im README einbinde (Markdown):
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   ![Startscreen](docs/screens/start.png)   `
-
-13) Troubleshooting (kurz aber nützlich)
-----------------------------------------
-
-### Script startet nicht (Policy)
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned   `
-
-### Savefile kaputt / JSON Fehler
-
-Lösche roulette\_state.json oder benutz reset.
-
-### Keine NPC Quotes
-
-Kei Problem — offline fallback wird automatisch genutzt.
-
-14) Lizenz / Hinweis
---------------------
-
-Projekt isch fürs Lernen/Demo gedacht. Kein echtes Gambling, kei Echtgeld.
+Drink water. Set limits. Touch grass.

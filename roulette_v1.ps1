@@ -1,4 +1,4 @@
-# 🎰 ROULADETTI DELUXE v3.4 — Multi-Player + Kredit + Zinse
+# 🎰 ROULETTE— Multi-Player + Kredit + Zinse
 
 param(
   [int]$StartBalance = 300,

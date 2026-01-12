@@ -1,4 +1,4 @@
-🎰 ROULADETTI DELUXE v3.4
+🎰 ROULETTE DELUXE 
 =========================
 
 **Multi-Player Roulette in PowerShell — with Credit & Interest**
@@ -90,7 +90,7 @@ ParameterDescriptionStartBalanceStarting cash per new player (default: 300)State
 
 ### Examples
 
-`   color red 10  evenodd odd 20  number 17 5   `
+`   color red 10 / evenodd odd 20 / number 17 5   `
 
 📋 Commands
 -----------

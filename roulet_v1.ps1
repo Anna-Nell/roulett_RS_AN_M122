@@ -1,4 +1,4 @@
-# 🎰 ROULADETTI DELUXE v3.3 — NPC Quotes jede Runde (mit Tag)
+# 🎰 ROULADETTI DELUXE v3.4 — Multi-Player + Kredit + Zinse
 
 param(
   [int]$StartBalance = 300,
@@ -9,6 +9,10 @@ param(
 if (-not $StatePath -or [string]::IsNullOrWhiteSpace($StatePath)) {
   $StatePath = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'roulette_state.json' } else { Join-Path (Get-Location) 'roulette_state.json' }
 }
+
+# --- Config ---
+$MaxCredit = 1000
+$InterestRate = 0.01  # 1% jede 5. Runde pro Spieler
 
 # --- Utils ---
 function Shout($msg, $color="White") { Write-Host $msg -ForegroundColor $color }
@@ -22,11 +26,11 @@ $preBets = @(
  "🎙️ Feeling lucky, darling? Setz dini Wette.",
  "🎙️ Don’t be shy — Money likes confidence."
 )
-$closing = @("🎙️ *No more bets...*", "🎙️ *Euses nimmt kei Wette meh...*", "🎙️ Hands weg vo de Chips, it’s go time.")
-$spinTalk = @("🎡 Wheel’s spinning… chhhhhrrrr…", "🎡 Und mir dreie… chrrrrr…", "🎡 Spin it to win it… chrrrr…")
-$landTalk = @("🛑 *Ball is dropping…*", "🛑 *Ball gumpft…*", "🛑 *Come on, baby…*")
-$winTalk = @("🏆 *BOOM!* Vegas-Kuss uf dini Stirn.", "💰 Cha-ching! De Cage liebt dich.", "🔥 Winner winner, fondue dinner.", "🤑 D’Bank verchlemmt, du nimmst mit.")
-$loseTalk = @("😵 House said: *merci für dä Beitrag*.", "💸 Unlucky, Bro — d’Kasse lacht.", "🧊 Ice cold. Nöime.", "👋 Try again, high roller.")
+$closing = @("🎙️ *No more bets...*", "🎙️ *Mir nemmet kei Wette meh...*", "🎙️ Händ weg vo de Chips, it’s go time.")
+$spinTalk = @("🎡 Wheel’s spinning… chhhhhrrrr…", "🎡 Und mir dreiet… chrrrrr…", "🎡 Spin it to win it… chrrrr…")
+$landTalk = @("🛑 *Ball is dropping…*", "🛑 *Ball gumpt…*", "🛑 *Come on, baby…*")
+$winTalk = @("🏆 *BOOM!* Vegas-Küsst uf dini Stirn.", "💰 Cha-ching! De Cage liebt dich.", "🔥 Winner winner, fondue dinner.", "🤑 D’Bank verchlemmt, du nimmst mit.")
+$loseTalk = @("😵 House said: *merci für dä Beitrag*.", "💸 Unlucky, Bro — d’Kasse lacht.", "🧊 Ice cold. Noime.", "👋 Try again, high roller.")
 $tableTalk = @(
  "💬 Tip: Rot/Schwarz isch 1:1 — sicher aber lame.",
  "💬 Zahl (0–36) isch 35x — s’fühlt sich an wie Magie.",
@@ -71,15 +75,16 @@ function Show-Choices {
   Shout "🧮 Beispiel" "Gray"
   Shout "   color red 10   |   evenodd odd 20   |   number 17 5" "DarkGray"
   Shout "🔧 Commands" "Gray"
-  Shout "   save  | load  | reset  | bal  | help  | q" "DarkGray"
+  Shout "   save | load | reset | bal | help | q" "DarkGray"
+  Shout "   players | player add <name> | player use <name>" "DarkGray"
+  Shout "   credit (Kredit ufneh) | repay <amount> (Kredit abzahle)" "DarkGray"
   Line
 }
 
 # --- Save / Load ---
 function Save-State {
-  param([string]$path, [int]$balance, [int]$rounds, [datetime]$ts)
-  $state = [pscustomobject]@{ Balance=$balance; Rounds=$rounds; Updated=$ts.ToString("o"); Version=33 }
-  $state | ConvertTo-Json -Depth 5 | Set-Content -Path $path -Encoding UTF8
+  param([string]$path, $stateObj)
+  $stateObj | ConvertTo-Json -Depth 8 | Set-Content -Path $path -Encoding UTF8
   Shout "💾 Saved → $path" "DarkGray"
 }
 function Load-State {
@@ -122,6 +127,55 @@ function Payout {
   return 0
 }
 
+# --- Kredit / Zinse ---
+function Apply-InterestIfNeeded {
+  param($player)
+  if ($player.Debt -gt 0 -and ($player.Rounds % 5 -eq 0)) {
+    $before = [decimal]$player.Debt
+    $after  = [math]::Ceiling(($before * (1 + $InterestRate)))
+    $player.Debt = [int]$after
+    Shout ("📈 Zinse hit: Debt CHF {0} → CHF {1} (+{2}%)" -f $before, $after, ([int]($InterestRate*100))) "DarkYellow"
+  }
+}
+
+function Offer-Credit {
+  param($player)
+
+  $room = $MaxCredit - [int]$player.Debt
+  if ($room -le 0) {
+    Shout "🚫 Kredit-Limit erreicht (max CHF $MaxCredit). Du muesch abzahle." "Yellow"
+    return
+  }
+
+  Shout ("🏦 Du bisch broke. Wotsch Kredit ufneh? (max no CHF {0})" -f $room) "Cyan"
+  $ans = Read-Host "Tippe: yes / no"
+  if ($ans -notmatch '^(y|yes)$') {
+    Shout "🧾 Okey. Denn chasch imfall grad nöd witer setze bis wieder Cash hesch." "DarkGray"
+    return
+  }
+
+  $amtRaw = Read-Host "Wie vil Kredit? (1-$room)"
+  if ($amtRaw -notmatch '^\d+$') { Shout "❌ Zahl bitte." "Yellow"; return }
+  $amt = [int]$amtRaw
+  if ($amt -le 0 -or $amt -gt $room) { Shout "❌ Usgserhalb vom Limit." "Yellow"; return }
+
+  $player.Balance += $amt
+  $player.Debt    += $amt
+  Shout ("✅ Kredit gno: +CHF {0} | Debt jetzt CHF {1} | Balance CHF {2}" -f $amt, $player.Debt, $player.Balance) "Green"
+}
+
+function Repay-Debt {
+  param($player, [int]$amt)
+  if ($player.Debt -le 0) { Shout "💤 Du hesch kei Debt." "DarkGray"; return }
+  if ($amt -le 0) { Shout "❌ repay > 0, Bro." "Yellow"; return }
+  if ($player.Balance -lt $amt) { Shout ("❌ Z’wenig Balance zum abzahle. Balance CHF {0}" -f $player.Balance) "Yellow"; return }
+
+  $pay = [math]::Min($amt, [int]$player.Debt)
+  $player.Balance -= $pay
+  $player.Debt    -= $pay
+  Shout ("✅ Abzahlt: CHF {0} | Debt CHF {1} | Balance CHF {2}" -f $pay, $player.Debt, $player.Balance) "Green"
+}
+
 # --- Validate ---
 function Validate-Bet {
   param([string]$type, [string]$val, [int]$amt, [int]$balance)
@@ -136,45 +190,138 @@ function Validate-Bet {
   return $null
 }
 
-# --- Start ---
+# --- State Init ---
 $loaded = Load-State -path $StatePath
-if ($loaded -and $loaded.Balance -gt 0) {
-  $balance = [int]$loaded.Balance
-  $round = [int]($loaded.Rounds ?? 0)
-  Shout "♻️ Save geladen (CHF $balance, Runde $round)" "DarkGray"
-} else { $balance = $StartBalance; $round = 0 }
+
+if (-not $loaded) {
+  $state = [pscustomobject]@{
+    Version = 34
+    Updated = (Get-Date).ToString("o")
+    ActivePlayer = "Anna"
+    Players = @{
+      "Anna" = [pscustomobject]@{ Balance = $StartBalance; Debt = 0; Rounds = 0 }
+    }
+  }
+} else {
+  # migrate-ish / normalize
+  $state = $loaded
+  if (-not $state.Players) {
+    $state = [pscustomobject]@{
+      Version = 34
+      Updated = (Get-Date).ToString("o")
+      ActivePlayer = "Player1"
+      Players = @{
+        "Player1" = [pscustomobject]@{ Balance = [int]($loaded.Balance ?? $StartBalance); Debt = 0; Rounds = [int]($loaded.Rounds ?? 0) }
+      }
+    }
+  }
+  if (-not $state.ActivePlayer) { $state.ActivePlayer = ($state.Players.PSObject.Properties.Name | Select-Object -First 1) }
+}
+
+function Get-Player {
+  $name = [string]$state.ActivePlayer
+  if (-not $state.Players.$name) {
+    $state.ActivePlayer = ($state.Players.PSObject.Properties.Name | Select-Object -First 1)
+    $name = [string]$state.ActivePlayer
+  }
+  return $state.Players.$name
+}
 
 Clear-Host
 Line
-Shout "🎰 ROULADETTI DELUXE — Balance: CHF $balance" "Cyan"
-Show-Choices   # help shown at start
+$player = Get-Player
+Shout ("🎰 ROULADETTI DELUXE — Player: {0} | Balance: CHF {1} | Debt: CHF {2}" -f $state.ActivePlayer, $player.Balance, $player.Debt) "Cyan"
+Show-Choices
 
 # --- Main Loop ---
 while ($true) {
+  $player = Get-Player
+
   # 🎭 NPC spricht am Start jeder Runde
   Shout (Get-NPCQuote) "DarkCyan"
 
+  # Auto: wenn broke -> Kredit-Option
+  if ($player.Balance -le 0) {
+    Offer-Credit -player $player
+    if ($player.Balance -le 0) {
+      Shout "🧾 Kein Cash. Du muesch entweder Kredit neh oder abzahle/Player wechsle." "DarkGray"
+    }
+  }
+
   Say-Random $preBets "Magenta"
-  $input = Read-Host "🎲 Setz dini Wette"
+  $input = Read-Host ("🎲 [{0}] Setz dini Wette" -f $state.ActivePlayer)
   if ($input -match '^\s*q\s*$') { break }
 
   switch -Regex ($input) {
-    '^\s*help\s*$'  { Show-Choices; continue }
-    '^\s*save\s*$'  { Save-State -path $StatePath -balance $balance -rounds $round -ts (Get-Date); continue }
-    '^\s*load\s*$'  { $ld=Load-State -path $StatePath; if($ld){$balance=$ld.Balance;$round=$ld.Rounds;Shout "♻️ Geladen. CHF $balance" "Gray"}; continue }
-    '^\s*reset\s*$' { $balance=$StartBalance;$round=0;Shout "🔁 Reset. CHF $balance" "Gray"; continue }
-    '^\s*bal\s*$'   { Shout ("💰 Balance: CHF {0}" -f $balance) "Cyan"; continue }
+    '^\s*help\s*$'     { Show-Choices; continue }
+    '^\s*save\s*$'     { $state.Updated=(Get-Date).ToString("o"); Save-State -path $StatePath -stateObj $state; continue }
+    '^\s*load\s*$'     { $ld=Load-State -path $StatePath; if($ld){$state=$ld;Shout "♻️ Geladen." "Gray"}; continue }
+    '^\s*reset\s*$'    {
+      $state.Players = @{}
+      $state.Players["Anna"] = [pscustomobject]@{ Balance = $StartBalance; Debt=0; Rounds=0 }
+      $state.ActivePlayer = "Anna"
+      Shout "🔁 Reset (Multi-Player). Player Anna neu." "Gray"
+      continue
+    }
+    '^\s*bal\s*$'      {
+      $p=Get-Player
+      Shout ("💰 [{0}] Balance: CHF {1} | Debt: CHF {2} | Rounds: {3}" -f $state.ActivePlayer, $p.Balance, $p.Debt, $p.Rounds) "Cyan"
+      continue
+    }
+    '^\s*players\s*$'  {
+      Line
+      Shout "👥 PLAYERS" "Cyan"
+      foreach($n in $state.Players.PSObject.Properties.Name) {
+        $p = $state.Players.$n
+        $tag = if ($n -eq $state.ActivePlayer) { "⭐" } else { "  " }
+        Shout ("{0} {1} | Bal CHF {2} | Debt CHF {3} | R {4}" -f $tag, $n, $p.Balance, $p.Debt, $p.Rounds) "Gray"
+      }
+      Line
+      continue
+    }
+    '^\s*player\s+add\s+(.+?)\s*$' {
+      $name = $Matches[1].Trim()
+      if ([string]::IsNullOrWhiteSpace($name)) { Shout "❌ Name fehlt." "Yellow"; continue }
+      if ($state.Players.$name) { Shout "⚠️ Dä Player git’s scho." "Yellow"; continue }
+      $state.Players | Add-Member -NotePropertyName $name -NotePropertyValue ([pscustomobject]@{ Balance=$StartBalance; Debt=0; Rounds=0 })
+      Shout "✅ Player added: $name (CHF $StartBalance)" "Green"
+      continue
+    }
+    '^\s*player\s+use\s+(.+?)\s*$' {
+      $name = $Matches[1].Trim()
+      if (-not $state.Players.$name) { Shout "❌ Kenn i nöd. Mach: players" "Yellow"; continue }
+      $state.ActivePlayer = $name
+      $p=Get-Player
+      Shout ("🔄 Active: {0} | Bal CHF {1} | Debt CHF {2}" -f $name, $p.Balance, $p.Debt) "Cyan"
+      continue
+    }
+    '^\s*credit\s*$' {
+      Offer-Credit -player (Get-Player)
+      continue
+    }
+    '^\s*repay\s+(\d+)\s*$' {
+      Repay-Debt -player (Get-Player) -amt ([int]$Matches[1])
+      continue
+    }
   }
 
   if ([string]::IsNullOrWhiteSpace($input)) { Say-Random $tableTalk "DarkCyan"; continue }
 
   if ($input -match '^\s*(color|number|evenodd)\s+(\S+)\s+(\d+)\s*$') {
     $type,$val,$amt = $Matches[1],$Matches[2],[int]$Matches[3]
-    $err = Validate-Bet -type $type -val $val -amt $amt -balance $balance
+
+    # wenn Balance z’wenig -> Kredit anbieten (aber nur bis Limit)
+    $player = Get-Player
+    if ($player.Balance -lt $amt) {
+      Shout ("💳 Z’wenig Cash (Bal CHF {0}). Wotsch Kredit, zum setze?" -f $player.Balance) "Yellow"
+      Offer-Credit -player $player
+    }
+
+    $err = Validate-Bet -type $type -val $val -amt $amt -balance $player.Balance
     if ($err) { Shout "$err  👉 Tipp: 'help' zeigt Beispiele." "Yellow"; continue }
 
     Shout ($closing | Get-Random) "DarkGray"
-    $balance -= $amt
+    $player.Balance -= $amt
     Animate-Spin
     $res = Spin
 
@@ -183,17 +330,24 @@ while ($true) {
 
     $win = Payout -betType $type -betValue $val -amount $amt -result $res
     if ($win -gt 0) {
-      $balance += $win
+      $player.Balance += $win
       Say-Random $winTalk "Green"
-      Shout ("💵 Payout: CHF {0}  |  💰 Balance: CHF {1}" -f $win, $balance) "Green"
+      Shout ("💵 Payout: CHF {0}  |  💰 Balance: CHF {1}  |  🧾 Debt: CHF {2}" -f $win, $player.Balance, $player.Debt) "Green"
     } else {
       Say-Random $loseTalk "DarkRed"
-      Shout ("💸 Einsatz weg. 💰 Balance: CHF {0}" -f $balance) "DarkRed"
+      Shout ("💸 Einsatz weg. 💰 Balance: CHF {0}  |  🧾 Debt: CHF {1}" -f $player.Balance, $player.Debt) "DarkRed"
     }
 
-    $round++
-    if ($round % 5 -eq 0) { Save-State -path $StatePath -balance $balance -rounds $round -ts (Get-Date) }
-    if ($balance -le 0) { Shout "🧾 Cashier sagt: Game over, high roller." "DarkGray"; break }
+    # Runde zählen + evtl. Zinse
+    $player.Rounds++
+    Apply-InterestIfNeeded -player $player
+
+    # autosave jede 5. Runde (global: irgend e Player spielt)
+    if (($player.Rounds % 5) -eq 0) {
+      $state.Updated=(Get-Date).ToString("o")
+      Save-State -path $StatePath -stateObj $state
+    }
+
     Line
   }
   else {
@@ -201,5 +355,6 @@ while ($true) {
   }
 }
 
-Save-State -path $StatePath -balance $balance -rounds $round -ts (Get-Date)
+$state.Updated=(Get-Date).ToString("o")
+Save-State -path $StatePath -stateObj $state
 Shout "🎤 Danke fürs Zocke. Trink Wasser, setz Limits. ✌️" "Cyan"

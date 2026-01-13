@@ -100,5 +100,6 @@ Gespeichert werden unter anderem:
 - Guthaben
 - Schulden
 - Anzahl gespielter Runden
+  
  ![Bild 5](Screenshot_5.png)
   

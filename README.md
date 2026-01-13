@@ -40,7 +40,7 @@ Beispiel:
 - color red/black 100
 - evenodd even/odd 100
 - number 0-36 100
-  bild 1
+- ![Bild 1](./Screenshot_1)
 
   ---
   
@@ -53,7 +53,7 @@ Beispiel:
 | load   | Lädt den gespeicherten Spielstand |
 | reset  | Setzt das Spiel zurück |
 | q      | Beendet das Spiel |
-Bild 2 
+![Bild 2](./Screenshot_2)
 
 ---
 
@@ -76,7 +76,7 @@ Regeln:
 - Maximales Kreditlimit: 1000 CHF
 - Zinsen: 1 % alle 5 gespielten Runden
 - Die Verzinsung erfolgt automatisch
-  bild 3
+![Bild 3](./Screenshot_3)
 
 ---  
 
@@ -87,8 +87,7 @@ Regeln:
 4. Gewinn oder Verlust wird berechnet
 5. Guthaben und Schulden werden aktualisiert
 6. Der Spielstand wird automatisch gespeichert
-Bild 4
-
+![Bild 4](./Screenshot_4)
 ---
 
 ## 9. Speicherung des Spielstands
@@ -101,5 +100,5 @@ Gespeichert werden unter anderem:
 - Guthaben
 - Schulden
 - Anzahl gespielter Runden
-  bild 5
+ ![Bild 5](./Screenshot_5)
   
